@@ -5,46 +5,58 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Blackhole Browser</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: sans-serif; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Inter', sans-serif; }
         
-        /* UI Layer */
+        /* UI Elements positioned in the dead center */
         .interface {
-            position: relative;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             z-index: 10;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            height: 100vh;
-            transition: opacity 0.5s;
+            width: 100%;
+            pointer-events: none;
         }
 
         .title {
-            position: absolute;
-            top: 10%;
-            color: #fff;
-            font-size: 3.5rem;
-            font-weight: 900;
-            letter-spacing: 15px;
+            color: #ffffff;
+            font-size: 5rem;
+            font-weight: 900; /* Extra Bold */
+            font-style: normal;
+            letter-spacing: 20px;
+            margin-bottom: 40px;
             text-transform: uppercase;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
         }
 
-        .search-container { width: 90%; max-width: 550px; }
+        .search-container { 
+            width: 90%; 
+            max-width: 500px; 
+            pointer-events: auto;
+        }
 
         input {
             width: 100%;
-            padding: 18px 30px;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 50px;
+            padding: 20px 35px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 60px;
             color: white;
-            font-size: 1.1rem;
+            font-size: 1.2rem;
             outline: none;
-            backdrop-filter: blur(12px);
+            backdrop-filter: blur(15px);
             text-align: center;
+            transition: 0.4s;
         }
 
-        /* The "Browser" Frame */
+        input:focus {
+            border-color: #ff9900; /* Accents the black hole orange */
+            box-shadow: 0 0 30px rgba(255, 153, 0, 0.3);
+        }
+
         #content-frame {
             position: fixed;
             top: 0;
@@ -52,24 +64,25 @@
             width: 100%;
             height: 100%;
             border: none;
-            display: none; /* Hidden until search */
+            display: none;
             z-index: 20;
             background: white;
         }
 
-        /* Back Button to return to Blackhole */
         #back-btn {
             position: fixed;
-            bottom: 20px;
-            right: 20px;
+            bottom: 30px;
             z-index: 30;
             display: none;
-            padding: 10px 20px;
-            background: #fff;
+            padding: 12px 25px;
+            background: #ff9900;
             color: #000;
-            border-radius: 20px;
+            border: none;
+            border-radius: 30px;
             cursor: pointer;
-            font-weight: bold;
+            font-weight: 900;
+            left: 50%;
+            transform: translateX(-50%);
         }
 
         canvas { position: fixed; top: 0; left: 0; z-index: 1; }
@@ -80,49 +93,107 @@
     <div class="interface" id="ui">
         <h1 class="title">BLACKHOLE</h1>
         <form class="search-container" id="search-form">
-            <input type="text" id="url-input" placeholder="Enter URL (e.g., https://example.com)" autocomplete="off">
+            <input type="text" id="url-input" placeholder="Feed the void a URL..." autocomplete="off">
         </form>
     </div>
 
-    <button id="back-btn">Close Page</button>
+    <button id="back-btn">RETURN TO VOID</button>
     <iframe id="content-frame"></iframe>
-    <canvas id="blackholeCanvas"></canvas>
+    <canvas id="bhCanvas"></canvas>
 
     <script>
-        // --- Canvas Animation ---
-        const canvas = document.getElementById('blackholeCanvas');
+        const canvas = document.getElementById('bhCanvas');
         const ctx = canvas.getContext('2d');
-        let w, h, stars = [];
+        let w, h, popcorns = [];
 
         function init() {
             w = canvas.width = window.innerWidth;
             h = canvas.height = window.innerHeight;
-            stars = [];
-            for (let i = 0; i < 400; i++) {
-                stars.push({
-                    dist: Math.random() * Math.max(w, h),
-                    angle: Math.random() * Math.PI * 2,
-                    speed: 0.005 + Math.random() * 0.01
-                });
+            popcorns = [];
+        }
+
+        // Popcorn Particle Class
+        class Popcorn {
+            constructor() {
+                this.reset();
+            }
+            reset() {
+                // Start from edges
+                const side = Math.floor(Math.random() * 4);
+                if(side === 0) { this.x = Math.random() * w; this.y = -20; }
+                else if(side === 1) { this.x = Math.random() * w; this.y = h + 20; }
+                else if(side === 2) { this.x = -20; this.y = Math.random() * h; }
+                else { this.x = w + 20; this.y = Math.random() * h; }
+                
+                this.size = Math.random() * 8 + 4;
+                this.angle = Math.random() * Math.PI * 2;
+                this.spin = Math.random() * 0.1;
+            }
+            update() {
+                const dx = w/2 - this.x;
+                const dy = h/2 - this.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                
+                // Gravity pull
+                const force = 500 / (dist + 50);
+                this.x += (dx / dist) * force;
+                this.y += (dy / dist) * force;
+                this.angle += this.spin;
+
+                // Sucked into event horizon (approx 50px)
+                if (dist < 55) this.reset();
+            }
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+                // Simple popcorn shape (3 white circles)
+                ctx.fillStyle = "#FFFDE7";
+                ctx.beginPath();
+                ctx.arc(0, 0, this.size/2, 0, Math.PI*2);
+                ctx.arc(this.size/3, this.size/3, this.size/2.5, 0, Math.PI*2);
+                ctx.arc(-this.size/3, this.size/4, this.size/2.2, 0, Math.PI*2);
+                ctx.fill();
+                ctx.restore();
             }
         }
 
-        function draw() {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        // Initialize particles
+        for(let i=0; i<60; i++) popcorns.push(new Popcorn());
+
+        function drawBlackHole() {
+            const cx = w/2;
+            const cy = h/2;
+
+            // 1. Outer Glow (Accretion Disk)
+            const gradient = ctx.createRadialGradient(cx, cy, 50, cx, cy, 250);
+            gradient.addColorStop(0, 'rgba(255, 100, 0, 1)');
+            gradient.addColorStop(0.2, 'rgba(255, 150, 0, 0.4)');
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, w, h);
-            stars.forEach(s => {
-                s.angle += s.speed;
-                s.dist -= 0.5;
-                if(s.dist < 20) s.dist = Math.max(w, h);
-                const x = w/2 + Math.cos(s.angle) * s.dist;
-                const y = h/2 + Math.sin(s.angle) * s.dist * 0.6;
-                ctx.fillStyle = '#fff';
-                ctx.fillRect(x, y, 2, 2);
-            });
-            requestAnimationFrame(draw);
+
+            // 2. The Singularity (Shadow)
+            ctx.shadowBlur = 40;
+            ctx.shadowColor = "rgba(255, 255, 255, 0.5)";
+            ctx.beginPath();
+            ctx.arc(cx, cy, 55, 0, Math.PI * 2);
+            ctx.fillStyle = "black";
+            ctx.fill();
+            ctx.shadowBlur = 0;
         }
 
-        // --- Logic to open URL in Frame ---
+        function animate() {
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, w, h);
+            
+            drawBlackHole();
+            popcorns.forEach(p => { p.update(); p.draw(); });
+            
+            requestAnimationFrame(animate);
+        }
+
+        // Logic to open URL
         const form = document.getElementById('search-form');
         const input = document.getElementById('url-input');
         const frame = document.getElementById('content-frame');
@@ -132,11 +203,7 @@
         form.onsubmit = (e) => {
             e.preventDefault();
             let url = input.value.trim();
-            
-            // Basic URL formatting
             if (!url.startsWith('http')) url = 'https://' + url;
-
-            // Show frame, hide UI
             frame.src = url;
             frame.style.display = 'block';
             ui.style.opacity = '0';
@@ -151,7 +218,7 @@
         };
 
         window.addEventListener('resize', init);
-        init(); draw();
+        init(); animate();
     </script>
 </body>
 </html>
